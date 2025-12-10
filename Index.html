@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>جدولي الدراسي 📚</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            touch-action: pan-y;
+            overscroll-behavior: none;
+        }
+        .schedule-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .schedule-card:active {
+            transform: scale(0.97);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .day-section {
+            margin-bottom: 20px;
+        }
+        .time-badge {
+            display: inline-block;
+            background: rgba(0,0,0,0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            animation: fadeIn 0.2s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal-content {
+            background-color: white;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 20px 20px 0 0;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .color-option.selected {
+            border-color: #1f2937;
+            transform: scale(1.1);
+        }
+        .fab-button {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 999;
+            transition: transform 0.2s;
+        }
+        .fab-button:active {
+            transform: scale(0.9);
+        }
+        input, textarea, select {
+            font-size: 16px !important;
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .empty-slot {
+            text-align: center;
+            padding: 20px;
+            color: #94a3b8;
+            font-size: 13px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 2px dashed #cbd5e1;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <!-- Header -->
+    <div class="header-gradient text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    📚 جدولي الدراسي
+                </h1>
+                <p class="text-xs opacity-90 mt-1">اضغط على أي محاضرة للتعديل</p>
+            </div>
+            <button onclick="showMenu()" class="p-2 hover:bg-white/20 rounded-lg transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="bg-white shadow-sm sticky top-[72px] z-40 overflow-x-auto">
+        <div class="flex gap-2 p-3 min-w-max">
+            <button onclick="filterDay('all')" class="filter-btn active px-4 py-2 rounded-full bg-purple-600 text-white text-sm font-medium whitespace-nowrap">
+                الكل
+            </button>
+            <button onclick="filterDay(0)" class="filter-btn px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium whitespace-nowrap">
+                الأحد
+            </button>
+            <button onclick="filterDay(1)" class="filter-btn px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium whitespace-nowrap">
+                الإثنين
+            </button>
+            <button onclick="filterDay(2)" class="filter-btn px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium whitespace-nowrap">
+                الثلاثاء
+            </button>
+            <button onclick="filterDay(3)" class="filter-btn px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium whitespace-nowrap">
+                الأربعاء
+            </button>
+            <button onclick="filterDay(4)" class="filter-btn px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium whitespace-nowrap">
+                الخميس
+            </button>
+        </div>
+    </div>
+
+    <!-- Schedule Content -->
+    <div class="p-4 pb-24" id="scheduleContainer"></div>
+
+    <!-- FAB Button -->
+    <div class="fab-button" onclick="showAddOptions()">➕</div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 flex justify-between items-center sticky top-0 z-10">
+                <h2 class="text-lg font-bold">✏️ تعديل المحاضرة</h2>
+                <button onclick="closeModal()" class="text-2xl">&times;</button>
+            </div>
+            <div class="p-4">
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم المادة *</label>
+                    <input type="text" id="editSubject" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right" placeholder="مثال: الطرق العددية">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رمز المادة</label>
+                    <input type="text" id="editCode" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right" placeholder="مثال: EEN 332">
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">القاعة</label>
+                        <input type="text" id="editRoom" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right" placeholder="AA">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اليوم</label>
+                        <select id="editDay" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right">
+                            <option value="0">الأحد</option>
+                            <option value="1">الإثنين</option>
+                            <option value="2">الثلاثاء</option>
+                            <option value="3">الأربعاء</option>
+                            <option value="4">الخميس</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الوقت</label>
+                    <select id="editTime" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right">
+                        <option value="09:00-10:40">09:00 - 10:40 ص</option>
+                        <option value="11:00-12:40">11:00 - 12:40 م</option>
+                        <option value="01:00-02:15">01:00 - 02:15 م</option>
+                        <option value="08:00-08:50">08:00 - 08:50 م (مسائي)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الدكتور/ة</label>
+                    <input type="text" id="editInstructor" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right" placeholder="اختياري">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات</label>
+                    <textarea id="editNotes" rows="2" class="w-full p-3 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:outline-none text-right" placeholder="أي ملاحظات"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-slate-700 mb-2">اللون</label>
+                    <div class="flex gap-2 overflow-x-auto pb-2" id="colorOptions">
+                        <div class="color-option bg-orange-200" data-color="orange"></div>
+                        <div class="color-option bg-purple-200" data-color="purple"></div>
+                        <div class="color-option bg-teal-200" data-color="teal"></div>
+                        <div class="color-option bg-blue-200" data-color="blue"></div>
+                        <div class="color-option bg-pink-200" data-color="pink"></div>
+                        <div class="color-option bg-green-200" data-color="green"></div>
+                        <div class="color-option bg-red-200" data-color="red"></div>
+                        <div class="color-option bg-yellow-200" data-color="yellow"></div>
+                        <div class="color-option bg-indigo-200" data-color="indigo"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <button onclick="saveEdit()" class="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold py-3 px-4 rounded-xl transition">
+                        💾 حفظ
+                    </button>
+                    <button onclick="deleteSlot()" class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold py-3 px-4 rounded-xl transition">
+                        🗑️ حذف
+                    </button>
+                </div>
+                <button onclick="closeModal()" class="w-full bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 font-bold py-3 px-4 rounded-xl transition">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Modal -->
+    <div id="menuModal" class="modal">
+        <div class="modal-content">
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4">
+                <h2 class="text-lg font-bold">القائمة</h2>
+            </div>
+            <div class="p-4">
+                <button onclick="exportSchedule()" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl mb-2 flex items-center justify-center gap-2">
+                    💾 حفظ الجدول
+                </button>
+                <button onclick="shareSchedule()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-xl mb-2 flex items-center justify-center gap-2">
+                    📤 مشاركة
+                </button>
+                <button onclick="printSchedule()" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-xl mb-2 flex items-center justify-center gap-2">
+                    🖨️ طباعة
+                </button>
+                <button onclick="closeMenu()" class="w-full bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scheduleData = {
+            "09:00-10:40": {
+                0: { subject: "دراسة العمل", code: "IEN 341", room: "AA", color: "orange" },
+                1: { subject: "الطرق العددية", code: "EEN 332", room: "AA", color: "purple" },
+                2: { subject: "دراسة العمل", code: "IEN 341", room: "AA", color: "orange" },
+                3: { subject: "الطرق العددية", code: "EEN 332", room: "AA", color: "purple" }
+            },
+            "11:00-12:40": {
+                0: { subject: "علم المواد", code: "CHEN 210", room: "AA", color: "teal" },
+                1: { subject: "مقدمة تصميم (2)", code: "IEN 202", room: "AA", color: "blue" },
+                2: { subject: "علم المواد", code: "CHEN 210", room: "AA", color: "teal" },
+                3: { subject: "مقدمة تصميم (2)", code: "IEN 202", room: "AA", color: "blue" },
+                4: { subject: "معمل مواد", code: "CHEN 210", room: "", color: "teal", notes: "11:50" }
+            },
+            "01:00-02:15": {
+                1: { subject: "تحليل نظم", code: "IEN 323", room: "AA", color: "pink" },
+                3: { subject: "تحليل نظم", code: "IEN 323", room: "AA", color: "pink" }
+            },
+            "08:00-08:50": {
+                0: { subject: "دراسة عمل", code: "عملي/مسائي", room: "", color: "orange" },
+                2: { subject: "دراسة عمل", code: "عملي/مسائي", room: "", color: "orange" }
+            }
+        };
+
+        const timeSlots = ["09:00-10:40", "11:00-12:40", "01:00-02:15", "08:00-08:50"];
+        const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+        
+        let currentEditSlot = null;
+        let selectedColor = "orange";
+        let currentFilter = 'all';
+
+        const colorClasses = {
+            orange: 'bg-orange-100 border-r-4 border-orange-500',
+            purple: 'bg-purple-100 border-r-4 border-purple-500',
+            teal: 'bg-teal-100 border-r-4 border-teal-500',
+            blue: 'bg-blue-100 border-r-4 border-blue-600',
+            pink: 'bg-pink-100 border-r-4 border-pink-500',
+            green: 'bg-green-100 border-r-4 border-green-500',
+            red: 'bg-red-100 border-r-4 border-red-500',
+            yellow: 'bg-yellow-100 border-r-4 border-yellow-500',
+            indigo: 'bg-indigo-100 border-r-4 border-indigo-500'
+        };
+
+        function renderSchedule() {
+            const container = document.getElementById('scheduleContainer');
+            container.innerHTML = '';
+
+            if (currentFilter === 'all') {
+                days.forEach((day, dayIndex) => {
+                    const daySection = document.createElement('div');
+                    daySection.className = 'day-section';
+                    
+                    let dayHTML = `<h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                        <span class="bg-white/20 px-3 py-1 rounded-full">${day}</span>
+                    </h3>`;
+                    
+                    let hasClasses = false;
+                    timeSlots.forEach(time => {
+                        const slot = scheduleData[time] && scheduleData[time][dayIndex];
+                        if (slot) {
+                            hasClasses = true;
+                            dayHTML += createClassCard(slot, time, dayIndex);
+                        }
+                    });
+                    
+                    if (!hasClasses) {
+                        dayHTML += '<div class="empty-slot">لا توجد محاضرات في هذا اليوم 📅</div>';
+                    }
+                    
+                    daySection.innerHTML = dayHTML;
+                    container.appendChild(daySection);
+                });
+            } else {
+                const dayIndex = parseInt(currentFilter);
+                const daySection = document.createElement('div');
+                daySection.className = 'day-section';
+                
+                let dayHTML = `<h3 class="text-2xl font-bold text-white mb-4 text-center">${days[dayIndex]}</h3>`;
+                
+                let hasClasses = false;
+                timeSlots.forEach(time => {
+                    const slot = scheduleData[time] && scheduleData[time][dayIndex];
+                    if (slot) {
+                        hasClasses = true;
+                        dayHTML += createClassCard(slot, time, dayIndex);
+                    }
+                });
+                
+                if (!hasClasses) {
+                    dayHTML += '<div class="empty-slot">لا توجد محاضرات في هذا اليوم 📅</div>';
+                }
+                
+                daySection.innerHTML = dayHTML;
+                container.appendChild(daySection);
+            }
+        }
+
+        function createClassCard(slot, time, dayIndex) {
+            const [start, end] = time.split('-');
+            return `
+                <div class="schedule-card ${colorClasses[slot.color]}" onclick="openEditModal('${time}', ${dayIndex})">
+                    <div class="time-badge">⏰ ${start} - ${end}</div>
+                    <div class="font-bold text-lg mb-1">${slot.subject}</div>
+                    <div class="text-sm opacity-70 mb-1">📚 ${slot.code}</div>
+                    ${slot.room ? `<div class="text-xs opacity-60">📍 قاعة ${slot.room}</div>` : ''}
+                    ${slot.instructor ? `<div class="text-xs opacity-60 mt-1">👨‍🏫 ${slot.instructor}</div>` : ''}
+                    ${slot.notes ? `<div class="text-xs opacity-60 mt-1">📝 ${slot.notes}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function filterDay(day) {
+            currentFilter = day;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-purple-600', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-700');
+            });
+            event.target.classList.add('active', 'bg-purple-600', 'text-white');
+            event.target.classList.remove('bg-slate-100', 'text-slate-700');
+            renderSchedule();
+        }
+
+        function openEditModal(time, day) {
+            currentEditSlot = { time, day };
+            const modal = document.getElementById('editModal');
+            modal.style.display = 'block';
+            
+            const slot = scheduleData[time] && scheduleData[time][day];
+            
+            if (slot) {
+                document.getElementById('editSubject').value = slot.subject || '';
+                document.getElementById('editCode').value = slot.code || '';
+                document.getElementById('editRoom').value = slot.room || '';
+                document.getElementById('editInstructor').value = slot.instructor || '';
+                document.getElementById('editNotes').value = slot.notes || '';
+                document.getElementById('editDay').value = day;
+                document.getElementById('editTime').value = time;
+                selectedColor = slot.color || 'orange';
+            } else {
+                document.getElementById('editSubject').value = '';
+                document.getElementById('editCode').value = '';
+                document.getElementById('editRoom').value = '';
+                document.getElementById('editInstructor').value = '';
+                document.getElementById('editNotes').value = '';
+                document.getElementById('editDay').value = day;
+                document.getElementById('editTime').value = time;
+                selectedColor = 'orange';
+            }
+            
+            updateColorSelection();
+        }
+
+        function updateColorSelection() {
+            document.querySelectorAll('.color-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.color === selectedColor) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                selectedColor = this.dataset.color;
+                updateColorSelection();
+            });
+        });
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditSlot = null;
+        }
+
+        function saveEdit() {
+            const subject = document.getElementById('editSubject').value;
+            const code = document.getElementById('editCode').value;
+            const room = document.getElementById('editRoom').value;
+            const instructor = document.getElementById('editInstructor').value;
+            const notes = document.getElementById('editNotes').value;
+            const day = parseInt(document.getElementById('editDay').value);
+            const time = document.getElementById('editTime').value;
+            
+            if (!subject && !code) {
+                alert('الرجاء إدخال اسم المادة أو رمزها على الأقل');
+                return;
+            }
+            
+            if (!scheduleData[time]) {
+                scheduleData[time] = {};
+            }
+            
+            scheduleData[time][day] = {
+                subject,
+                code,
+                room,
+                instructor,
+                notes,
+                color: selectedColor
+            };
+            
+            renderSchedule();
+            closeModal();
+        }
+
+        function deleteSlot() {
+            if (!currentEditSlot) return;
+            
+            if (confirm('هل أنت متأكد من حذف هذه المحاضرة؟')) {
+                if (scheduleData[currentEditSlot.time]) {
+                    delete scheduleData[currentEditSlot.time][currentEditSlot.day];
+                }
+                renderSchedule();
+                closeModal();
+            }
+        }
+
+        function showAddOptions() {
+            currentEditSlot = { time: "09:00-10:40", day: 0 };
+            openEditModal("09:00-10:40", 0);
+        }
+
+        function showMenu() {
+            document.getElementById('menuModal').style.display = 'block';
+        }
+
+        function closeMenu() {
+            document.getElementById('menuModal').style.display = 'none';
+        }
+
+        function exportSchedule() {
+            const dataStr = JSON.stringify(scheduleData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'my-schedule.json';
+            link.click();
+            alert('تم حفظ الجدول! 💾');
+            closeMenu();
+        }
+
+        function shareSchedule() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'جدولي الدراسي',
+                    text: 'شاهد جدولي الدراسي!',
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                alert('المشاركة غير مدعومة في هذا المتصفح');
+            }
+            closeMenu();
+        }
+
+        function printSchedule() {
+            window.print();
+            closeMenu();
+        }
+
+        window.onclick = function(event) {
+            const editModal = document.getElementById('editModal');
+            const menuModal = document.getElementById('menuModal');
+            if (event.target === editModal) {
+                closeModal();
+            }
+            if (event.target === menuModal) {
+                closeMenu();
+            }
+        }
+
+        renderSchedule();
+    </script>
+
+</body>
+</html>
